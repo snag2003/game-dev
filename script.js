@@ -4,6 +4,8 @@ window.addEventListener("load", function () {
   const ctx = canvas.getContext("2d");
   canvas.width = 1000;
   canvas.height = 500;
+  let isRunning = false;
+  let lastTime = 0;
 
   class InputHandler {
     constructor(game) {
@@ -637,11 +639,13 @@ window.addEventListener("load", function () {
       this.ammoInterval = 350;
       this.gameOver = false;
       this.score = 0;
-      this.winningScore = 80;
+      this.winningScore = 100;
       this.gameTime = 0;
       this.timeLimit = 40000;
       this.speed = 1;
       this.debug = false;
+      this.running = false;
+      this.gameOver = false;
     }
     update(deltaTime) {
       if (!this.gameOver) this.gameTime += deltaTime;
@@ -746,7 +750,21 @@ window.addEventListener("load", function () {
         explosion.draw(context);
       });
       this.background.layer4.draw(context);
+
+      // ✅ Add PAUSED text if game is paused but not over
+      if (!this.running && !this.gameOver) {
+        context.save();
+        context.fillStyle = "rgba(0, 0, 0, 0.5)";
+        context.fillRect(0, 0, this.width, this.height);
+
+        context.fillStyle = "white";
+        context.font = "bold 48px Arial";
+        context.textAlign = "center";
+        context.fillText("PAUSED", this.width / 2, this.height / 2);
+        context.restore();
+      }
     }
+
     addEnemy() {
       const randomize = Math.random();
       if (randomize < 0.1) this.enemies.push(new Angler1(this));
@@ -789,17 +807,37 @@ window.addEventListener("load", function () {
   }
 
   const game = new Game(canvas.width, canvas.height);
-  let lastTime = 0;
+  lastTime = 0;
+  const input = new InputHandler(game);
+  const sound = new SoundController();
+  document.getElementById("startBtn").addEventListener("click", () => {
+    if (!game.running && !game.gameOver) {
+      game.running = true;
+      document.getElementById("startScreen").style.display = "none";
+      document.getElementById("gameControls").style.display = "block";
+    }
+  });
+
+  document.getElementById("pauseBtn").addEventListener("click", () => {
+    game.running = !game.running;
+  });
+
+  document.getElementById("restartBtn").addEventListener("click", () => {
+    const newGame = new Game(canvas.width, canvas.height);
+    Object.assign(game, newGame);
+    game.running = true;
+  });
 
   // animation loop
   function animate(timeStamp) {
     const deltaTime = timeStamp - lastTime;
     lastTime = timeStamp;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (game.running) {
+      game.update(deltaTime);
+    }
     game.draw(ctx);
-    game.update(deltaTime);
     requestAnimationFrame(animate);
   }
-
   animate(0);
 });
